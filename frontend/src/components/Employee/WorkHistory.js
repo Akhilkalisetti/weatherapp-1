@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import styled from 'styled-components';
-import { Calendar, Clock, Building, Home, Trash2, FileText, CheckCircle, AlertCircle, Pause } from 'lucide-react';
+import { Calendar, Clock, Building, Home, Trash2, FileText, CheckCircle, AlertCircle, Pause, Edit3, Search } from 'lucide-react';
 
 const HistoryContainer = styled.div`
   display: flex;
@@ -74,8 +74,8 @@ const StatusBadge = styled.div`
   }};
 `;
 
-const DeleteButton = styled.button`
-  background: #ff6b6b;
+const ActionButton = styled.button`
+  background: ${props => props.variant === 'edit' ? '#667eea' : '#ff6b6b'};
   color: white;
   border: none;
   padding: 8px 12px;
@@ -86,11 +86,17 @@ const DeleteButton = styled.button`
   gap: 5px;
   font-size: 0.9rem;
   transition: all 0.3s ease;
+  margin-left: 8px;
   
   &:hover {
-    background: #ee5a24;
+    background: ${props => props.variant === 'edit' ? '#5a67d8' : '#ee5a24'};
     transform: translateY(-1px);
   }
+`;
+
+const ActionButtons = styled.div`
+  display: flex;
+  gap: 8px;
 `;
 
 const ReportContent = styled.div`
@@ -134,6 +140,96 @@ const EmptyState = styled.div`
   border-radius: 12px;
 `;
 
+const Toolbar = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid #f0f0f0;
+  border-radius: 12px;
+  padding: 12px 16px;
+`;
+
+const LeftGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const RightGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const Select = styled.select`
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fafafa;
+  color: #374151;
+`;
+
+const SummaryPill = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  background: ${props => props.variant === 'completed' ? '#d4edda' : '#cce5ff'};
+  color: ${props => props.variant === 'completed' ? '#155724' : '#004085'};
+`;
+
+const SearchContainer = styled.div`
+  position: relative;
+  width: 280px;
+`;
+
+const SearchInput = styled.input`
+  width: 100%;
+  padding: 10px 36px 10px 36px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: #fafafa;
+  color: #374151;
+  transition: all 0.2s ease;
+  
+  &:focus {
+    outline: none;
+    border-color: #667eea;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+`;
+
+const SearchIcon = styled(Search)`
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+`;
+
+const ClearButton = styled.button`
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  
+  &:hover {
+    background: #f3f4f6;
+  }
+`;
+
 const getStatusIcon = (status) => {
   switch (status) {
     case 'completed': return <CheckCircle size={16} />;
@@ -165,7 +261,34 @@ const formatTime = (dateString) => {
   });
 };
 
-function WorkHistory({ reports, onDelete }) {
+function WorkHistory({ reports, onDelete, onEdit }) {
+  console.log('WorkHistory rendered with props:', { 
+    reportsCount: reports?.length, 
+    hasOnDelete: !!onDelete, 
+    hasOnEdit: !!onEdit 
+  });
+
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const { filteredReports, completedCount, inProgressCount } = useMemo(() => {
+    const safeReports = Array.isArray(reports) ? reports : [];
+    const completed = safeReports.filter(r => r.status === 'completed').length;
+    const inProgress = safeReports.filter(r => r.status === 'in-progress').length;
+    const byStatus = statusFilter === 'all' 
+      ? safeReports 
+      : safeReports.filter(r => r.status === statusFilter);
+    const q = searchQuery.trim().toLowerCase();
+    const filtered = q
+      ? byStatus.filter(r => (
+          (r.project || '').toLowerCase().includes(q) ||
+          (r.description || '').toLowerCase().includes(q) ||
+          (r.status || '').toLowerCase().includes(q)
+        ))
+      : byStatus;
+    return { filteredReports: filtered, completedCount: completed, inProgressCount: inProgress };
+  }, [reports, statusFilter, searchQuery]);
+
   if (!reports || reports.length === 0) {
     return (
       <EmptyState>
@@ -177,8 +300,66 @@ function WorkHistory({ reports, onDelete }) {
 
   return (
     <HistoryContainer>
-      {reports.map((report) => (
-        <ReportCard key={report.id}>
+      <Toolbar>
+        <LeftGroup>
+          <Select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            aria-label="Filter by status"
+          >
+            <option value="all">All statuses</option>
+            <option value="completed">Completed</option>
+            <option value="in-progress">In Progress</option>
+            <option value="blocked">Blocked</option>
+            <option value="on-hold">On Hold</option>
+          </Select>
+
+          <SearchContainer>
+            <SearchIcon size={18} />
+            <SearchInput
+              type="text"
+              placeholder="Search history..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <ClearButton
+                aria-label="Clear search"
+                onClick={() => setSearchQuery('')}
+                title="Clear"
+              >
+                ×
+              </ClearButton>
+            )}
+          </SearchContainer>
+
+          <ActionButton
+            variant="edit"
+            onClick={() => {
+              alert(`Completed: ${completedCount}\nIn Progress: ${inProgressCount}`);
+            }}
+            title="Show status summary"
+          >
+            <CheckCircle size={16} />
+            Status Summary
+          </ActionButton>
+        </LeftGroup>
+        <RightGroup>
+          <SummaryPill variant="completed">
+            <CheckCircle size={14} /> {completedCount}
+          </SummaryPill>
+          <SummaryPill variant="in-progress">
+            <Clock size={14} /> {inProgressCount}
+          </SummaryPill>
+        </RightGroup>
+      </Toolbar>
+      {filteredReports.length === 0 ? (
+        <EmptyState>
+          <FileText size={48} style={{ marginBottom: '15px', opacity: 0.5 }} />
+          <p>No reports match the current filters.</p>
+        </EmptyState>
+      ) : filteredReports.map((report) => (
+        <ReportCard key={report._id || report.id}>
           <ReportHeader>
             <ReportMeta>
               <MetaItem>
@@ -194,10 +375,43 @@ function WorkHistory({ reports, onDelete }) {
                 {formatTime(report.createdAt)}
               </MetaItem>
             </ReportMeta>
-            <DeleteButton onClick={() => onDelete(report.id)}>
-              <Trash2 size={16} />
-              Delete
-            </DeleteButton>
+            <ActionButtons>
+              <ActionButton 
+                variant="edit" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('Edit button clicked!');
+                  console.log('Edit clicked for report:', report);
+                  console.log('onEdit function:', onEdit);
+                  console.log('onEdit type:', typeof onEdit);
+                  
+                  if (onEdit && typeof onEdit === 'function') {
+                    console.log('Calling onEdit function...');
+                    onEdit(report);
+                  } else {
+                    console.error('onEdit function is not provided or not a function!');
+                    alert('Edit functionality not available. onEdit is: ' + typeof onEdit);
+                  }
+                }}
+                style={{ 
+                  pointerEvents: 'auto',
+                  zIndex: 10,
+                  position: 'relative'
+                }}
+              >
+                <Edit3 size={16} />
+                Edit
+              </ActionButton>
+              <ActionButton variant="delete" onClick={() => {
+                console.log('Delete clicked for report:', report);
+                console.log('Report ID:', report._id || report.id);
+                onDelete(report._id || report.id);
+              }}>
+                <Trash2 size={16} />
+                Delete
+              </ActionButton>
+            </ActionButtons>
           </ReportHeader>
           
           <ReportContent>

@@ -193,6 +193,7 @@ function EmployeeDashboard() {
   const [workReports, setWorkReports] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [weatherAbsenceRequests, setWeatherAbsenceRequests] = useState([]);
+  const [editingReport, setEditingReport] = useState(null);
 
   useEffect(() => {
     // Load work reports from backend API
@@ -255,31 +256,67 @@ function EmployeeDashboard() {
     logout();
   };
 
-  const addWorkReport = async (report) => {
+  const addWorkReport = async (report, isEditing = false) => {
+    console.log('📝 addWorkReport called with:', { report, isEditing });
+    
     try {
-      // Call backend API to create report
-      const reportData = {
-        date: report.date || new Date().toISOString().split('T')[0],
-        project: report.project || report.description?.split(':')[0] || 'General',
-        tasks: report.description || report.tasks,
-        location: report.workLocation || 'office',
-        status: report.status || 'in-progress'
-      };
-      
-      await workReportAPI.create(reportData);
+      if (isEditing) {
+        // Update existing report
+        const reportData = {
+          date: report.date || new Date().toISOString().split('T')[0],
+          project: report.project || 'General',
+          tasks: report.description || '',
+          location: report.workLocation || 'office',
+          status: report.status || 'in-progress',
+          hours: report.hours || ''
+        };
+        
+        const reportId = report._id || report.id;
+        console.log('🔄 Updating report with ID:', reportId);
+        console.log('🔄 Update data:', reportData);
+        
+        try {
+          const updateResult = await workReportAPI.update(reportId, reportData);
+          console.log('✅ Work report update result:', updateResult);
+        } catch (updateError) {
+          console.error('❌ Update API call failed:', updateError);
+          throw updateError;
+        }
+      } else {
+        // Create new report
+        const reportData = {
+          date: report.date || new Date().toISOString().split('T')[0],
+          project: report.project || 'General',
+          tasks: report.description || '',
+          location: report.workLocation || 'office',
+          status: report.status || 'in-progress',
+          hours: report.hours || ''
+        };
+        
+        console.log('➕ Creating new report with data:', reportData);
+        const createResult = await workReportAPI.create(reportData);
+        console.log('✅ Work report create result:', createResult);
+      }
       
       // Reload from backend
+      console.log('🔄 Reloading reports from backend...');
       const reports = await workReportAPI.getAll();
+      console.log('📊 Loaded reports:', reports);
       setWorkReports(reports);
-      console.log('✅ Work report added. Total:', reports.length);
+      setEditingReport(null);
+      console.log('✅ Total reports after update:', reports.length);
     } catch (error) {
-      console.error('❌ Error adding work report:', error.message);
+      console.error('❌ Error saving work report:', error);
+      console.error('❌ Error details:', error.message);
+      alert(`Failed to save work report: ${error.message}`);
     }
   };
 
   const deleteWorkReport = async (reportId) => {
+    console.log('🗑️ Attempting to delete report with ID:', reportId);
     try {
       await workReportAPI.delete(reportId);
+      console.log('✅ Delete API call successful');
       
       // Reload from backend
       const reports = await workReportAPI.getAll();
@@ -287,6 +324,31 @@ function EmployeeDashboard() {
       console.log('✅ Work report deleted. Total:', reports.length);
     } catch (error) {
       console.error('❌ Error deleting work report:', error.message);
+      alert(`Failed to delete work report: ${error.message}`);
+    }
+  };
+
+  const handleEditReport = (report) => {
+    console.log('🖊️ Edit report called with:', report);
+    console.log('Report ID for editing:', report._id || report.id);
+    console.log('Setting editing report to:', report);
+    setEditingReport(report);
+    setActiveTab('status'); // Switch to status tab to show the form
+    console.log('Switched to status tab for editing');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingReport(null);
+  };
+
+  // Test function to verify backend connection
+  const testBackendConnection = async () => {
+    try {
+      console.log('🧪 Testing backend connection...');
+      const reports = await workReportAPI.getAll();
+      console.log('✅ Backend is accessible, loaded', reports.length, 'reports');
+    } catch (error) {
+      console.error('❌ Backend connection test failed:', error);
     }
   };
 
@@ -338,10 +400,30 @@ function EmployeeDashboard() {
             <p>Ready to report your work status?</p>
           </UserDetails>
         </UserInfo>
-        <LogoutButton onClick={handleLogout}>
-          <LogOut size={20} />
-          Logout
-        </LogoutButton>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={testBackendConnection}
+            style={{
+              background: '#10b981',
+              color: 'white',
+              border: 'none',
+              padding: '12px 20px',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontWeight: '500',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            Test Backend
+          </button>
+          <LogoutButton onClick={handleLogout}>
+            <LogOut size={20} />
+            Logout
+          </LogoutButton>
+        </div>
       </Header>
 
       <TabContainer>
@@ -416,7 +498,11 @@ function EmployeeDashboard() {
                   <FileText size={24} />
                   Report Work Status
                 </CardTitle>
-                <WorkStatusForm onSubmit={addWorkReport} />
+                <WorkStatusForm 
+                  onSubmit={addWorkReport} 
+                  editData={editingReport}
+                  onCancelEdit={handleCancelEdit}
+                />
               </Card>
               
               <div>
@@ -444,6 +530,7 @@ function EmployeeDashboard() {
               <WorkHistory 
                 reports={workReports}
                 onDelete={deleteWorkReport}
+                onEdit={handleEditReport}
               />
             </Card>
           )}

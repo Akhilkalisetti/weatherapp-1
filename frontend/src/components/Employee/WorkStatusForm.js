@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Briefcase, Home, Building, Send, FileText } from 'lucide-react';
 
@@ -143,7 +143,7 @@ const QuickActionButton = styled.button`
   }
 `;
 
-function WorkStatusForm({ onSubmit }) {
+function WorkStatusForm({ onSubmit, editData = null, onCancelEdit = null }) {
   const [formData, setFormData] = useState({
     workLocation: 'office',
     project: '',
@@ -153,6 +153,29 @@ function WorkStatusForm({ onSubmit }) {
     date: new Date().toISOString().split('T')[0]
   });
   const [loading, setLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [originalData, setOriginalData] = useState(null);
+
+  // Initialize form with edit data if provided
+  useEffect(() => {
+    console.log('WorkStatusForm useEffect - editData:', editData);
+    if (editData) {
+      console.log('Setting form data for editing:', editData);
+      setFormData({
+        workLocation: editData.workLocation || 'office',
+        project: editData.project || '',
+        status: editData.status || 'in-progress',
+        description: editData.description || '',
+        hours: editData.hours || '',
+        date: editData.date || new Date().toISOString().split('T')[0]
+      });
+      setIsEditing(true);
+      setOriginalData(editData);
+      console.log('Form set to editing mode');
+    } else {
+      console.log('No edit data provided, form in create mode');
+    }
+  }, [editData]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -197,6 +220,23 @@ function WorkStatusForm({ onSubmit }) {
     }
   };
 
+  const handleCancelEdit = () => {
+    console.log('Canceling edit mode');
+    if (onCancelEdit) {
+      onCancelEdit();
+    }
+    setIsEditing(false);
+    setOriginalData(null);
+    setFormData({
+      workLocation: 'office',
+      project: '',
+      status: 'in-progress',
+      description: '',
+      hours: '',
+      date: new Date().toISOString().split('T')[0]
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.project || !formData.description) {
@@ -208,21 +248,31 @@ function WorkStatusForm({ onSubmit }) {
     try {
       const reportData = {
         ...formData,
-        id: Date.now(),
-        createdAt: new Date().toISOString()
+        id: isEditing ? (originalData._id || originalData.id) : Date.now(),
+        _id: isEditing ? (originalData._id || originalData.id) : undefined,
+        createdAt: isEditing ? originalData.createdAt : new Date().toISOString(),
+        updatedAt: isEditing ? new Date().toISOString() : undefined
       };
 
-      onSubmit(reportData);
+      console.log('Submitting report data:', reportData);
+      console.log('Is editing:', isEditing);
+
+      onSubmit(reportData, isEditing);
       
-      // Reset form
-      setFormData({
-        workLocation: 'office',
-        project: '',
-        status: 'in-progress',
-        description: '',
-        hours: '',
-        date: new Date().toISOString().split('T')[0]
-      });
+      if (isEditing) {
+        console.log('Edit completed, resetting form');
+        handleCancelEdit();
+      } else {
+        // Reset form for new entries
+        setFormData({
+          workLocation: 'office',
+          project: '',
+          status: 'in-progress',
+          description: '',
+          hours: '',
+          date: new Date().toISOString().split('T')[0]
+        });
+      }
     } catch (error) {
       console.error('Error submitting report:', error);
       alert('Error submitting report. Please try again.');
@@ -233,6 +283,26 @@ function WorkStatusForm({ onSubmit }) {
 
   return (
     <FormContainer>
+      {isEditing && (
+        <div style={{ marginBottom: '20px' }}>
+          <button
+            type="button"
+            onClick={handleCancelEdit}
+            style={{
+              background: '#6b7280',
+              color: 'white',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              marginRight: '10px'
+            }}
+          >
+            Cancel Edit
+          </button>
+        </div>
+      )}
+      
       <form onSubmit={handleSubmit}>
         <FormGroup>
           <Label>Work Location *</Label>
@@ -344,7 +414,7 @@ function WorkStatusForm({ onSubmit }) {
 
         <SubmitButton type="submit" disabled={loading}>
           <Send size={20} />
-          {loading ? 'Submitting...' : 'Submit Report'}
+          {loading ? (isEditing ? 'Updating...' : 'Submitting...') : (isEditing ? 'Update Report' : 'Submit Report')}
         </SubmitButton>
       </form>
     </FormContainer>

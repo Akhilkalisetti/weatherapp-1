@@ -126,7 +126,7 @@ router.get('/reports', auth, isEmployee, async (req, res) => {
 // Create work report (employee only)
 router.post('/reports', auth, isEmployee, async (req, res) => {
   try {
-    const { date, project, tasks, location, status } = req.body;
+    const { date, project, tasks, location, status, hours } = req.body;
 
     const report = new WorkReport({
       userId: req.user._id,
@@ -134,7 +134,8 @@ router.post('/reports', auth, isEmployee, async (req, res) => {
       project,
       tasks,
       location,
-      status: status || 'in-progress'
+      status: status || 'in-progress',
+      hours: hours || ''
     });
 
     await report.save();
@@ -148,23 +149,48 @@ router.post('/reports', auth, isEmployee, async (req, res) => {
 // Update work report
 router.put('/reports/:id', auth, isEmployee, async (req, res) => {
   try {
-    const { date, project, tasks, location, status } = req.body;
+    const { date, project, tasks, location, status, hours } = req.body;
+    console.log('🔄 Updating work report:', req.params.id);
+    console.log('🔄 Update data:', { date, project, tasks, location, status, hours });
+    
     const report = await WorkReport.findOne({ _id: req.params.id, userId: req.user._id });
 
     if (!report) {
+      console.log('❌ Report not found:', req.params.id);
       return res.status(404).json({ error: 'Report not found' });
     }
+
+    console.log('📝 Found report:', report);
+    console.log('📝 Current report data:', {
+      date: report.date,
+      project: report.project,
+      tasks: report.tasks,
+      location: report.location,
+      status: report.status,
+      hours: report.hours
+    });
 
     report.date = date || report.date;
     report.project = project || report.project;
     report.tasks = tasks || report.tasks;
     report.location = location || report.location;
     report.status = status || report.status;
+    report.hours = hours !== undefined ? hours : report.hours;
+
+    console.log('📝 Updated report data:', {
+      date: report.date,
+      project: report.project,
+      tasks: report.tasks,
+      location: report.location,
+      status: report.status,
+      hours: report.hours
+    });
 
     await report.save();
+    console.log('✅ Report saved successfully');
     res.json({ message: 'Work report updated successfully', report });
   } catch (error) {
-    console.error('Update work report error:', error);
+    console.error('❌ Update work report error:', error);
     res.status(500).json({ error: 'Failed to update work report' });
   }
 });

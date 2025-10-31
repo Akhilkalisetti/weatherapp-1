@@ -4,6 +4,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 // Helper function to get auth headers
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
+  console.log('🔑 Auth token:', token ? `${token.substring(0, 20)}...` : 'No token found');
   return {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`
@@ -15,6 +16,10 @@ const fetchAPI = async (url, options = {}) => {
   try {
     const headers = getAuthHeaders();
     
+    console.log(`🌐 API Request: ${options.method || 'GET'} ${API_URL}${url}`);
+    console.log('🌐 Request headers:', headers);
+    console.log('🌐 Request body:', options.body);
+    
     const response = await fetch(`${API_URL}${url}`, {
       ...options,
       headers: {
@@ -23,15 +28,20 @@ const fetchAPI = async (url, options = {}) => {
       }
     });
 
+    console.log(`🌐 API Response: ${response.status} ${response.statusText}`);
+
     if (!response.ok) {
       const errorData = await response.json();
-      console.error(`API Error (${response.status}):`, errorData.error || errorData);
-      throw new Error(errorData.error || 'API request failed');
+      console.error(`❌ API Error (${response.status}):`, errorData.error || errorData);
+      console.error('❌ Full error response:', errorData);
+      throw new Error(errorData.error || `API request failed with status ${response.status}`);
     }
 
     const data = await response.json();
+    console.log('✅ API Response data:', data);
     return data;
   } catch (error) {
+    console.error('❌ Fetch error:', error);
     if (error.message.includes('Failed to fetch')) {
       throw new Error('Cannot connect to server. Make sure the backend is running on port 5000.');
     }

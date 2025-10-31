@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { Search, Edit, Trash2, Download, Briefcase, Clock, MapPin } from 'lucide-react';
 import { workReportAPI } from '../../services/api';
@@ -31,12 +31,13 @@ const TableTitle = styled.h3`
 
 const SearchContainer = styled.div`
   position: relative;
-  width: 300px;
+  width: 360px;
+  max-width: 100%;
 `;
 
 const SearchInput = styled.input`
   width: 100%;
-  padding: 12px 16px 12px 45px;
+  padding: 12px 40px 12px 45px;
   border: 2px solid #e1e5e9;
   border-radius: 12px;
   font-size: 0.9rem;
@@ -55,6 +56,24 @@ const SearchIcon = styled(Search)`
   top: 50%;
   transform: translateY(-50%);
   color: #999;
+`;
+
+const ClearButton = styled.button`
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+  
+  &:hover {
+    background: #f1f5f9;
+  }
 `;
 
 const Table = styled.table`
@@ -210,6 +229,7 @@ function WorkReportTable() {
   const { user } = useAuth();
   const [reports, setReports] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [taskQuery, setTaskQuery] = useState('');
   const [loading, setLoading] = useState(false);
 
   React.useEffect(() => {
@@ -266,6 +286,12 @@ function WorkReportTable() {
     }).length
   };
 
+  const filteredReports = useMemo(() => {
+    if (!taskQuery) return reports;
+    const q = taskQuery.toLowerCase();
+    return reports.filter(r => (r.tasks || '').toLowerCase().includes(q));
+  }, [reports, taskQuery]);
+
   return (
     <TableContainer>
       <TableHeader>
@@ -273,6 +299,27 @@ function WorkReportTable() {
           <Briefcase size={24} />
           Work Reports Database Table
         </TableTitle>
+        <SearchContainer>
+          <SearchIcon size={20} />
+          <SearchInput
+            type="text"
+            placeholder="Search by project, tasks, location, or status..."
+            value={searchQuery}
+            onChange={handleSearch}
+          />
+          {searchQuery && (
+            <ClearButton
+              aria-label="Clear search"
+              onClick={() => {
+                setSearchQuery('');
+                fetchReports('');
+              }}
+              title="Clear"
+            >
+              ×
+            </ClearButton>
+          )}
+        </SearchContainer>
       </TableHeader>
 
       <StatsRow>
@@ -298,17 +345,27 @@ function WorkReportTable() {
         <SearchIcon size={20} />
         <SearchInput
           type="text"
-          placeholder="Search by project, tasks, location, or status..."
-          value={searchQuery}
-          onChange={handleSearch}
+          placeholder="Search tasks only..."
+          value={taskQuery}
+          onChange={(e) => setTaskQuery(e.target.value)}
         />
+        {taskQuery && (
+          <ClearButton
+            aria-label="Clear task search"
+            onClick={() => setTaskQuery('')}
+            title="Clear"
+          >
+            ×
+          </ClearButton>
+        )}
       </SearchContainer>
+
 
       {loading ? (
         <EmptyState>
           <div>Loading...</div>
         </EmptyState>
-      ) : reports.length === 0 ? (
+      ) : filteredReports.length === 0 ? (
         <EmptyState>
           <EmptyTitle>No Work Reports Found</EmptyTitle>
           <EmptySubtitle>Start submitting work reports to see them here.</EmptySubtitle>
@@ -327,7 +384,7 @@ function WorkReportTable() {
             </TableRow>
           </TableHead>
           <tbody>
-            {reports.map((report) => (
+            {filteredReports.map((report) => (
               <TableRow key={report._id}>
                 <TableCell style={{ fontWeight: 600, color: '#333' }}>
                   {report.date}

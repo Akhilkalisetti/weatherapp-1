@@ -25,8 +25,12 @@ const workReportSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['completed', 'in-progress', 'pending'],
+    enum: ['completed', 'in-progress', 'pending', 'blocked', 'on-hold'],
     default: 'in-progress'
+  },
+  hours: {
+    type: String,
+    default: ''
   },
   createdAt: {
     type: Date,
