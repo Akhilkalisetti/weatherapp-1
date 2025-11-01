@@ -6,6 +6,7 @@ import Login from './components/Auth/Login';
 import TravelerDashboard from './components/Traveler/TravelerDashboard';
 import EmployeeDashboard from './components/Employee/EmployeeDashboard';
 import CompanyDashboard from './components/Employee/CompanyDashboard';
+import WellnessWeatherDashboard from './components/Employee/WellnessWeatherDashboard';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 const AppContainer = styled.div`
@@ -66,6 +67,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute requiredRole="employee">
             <EmployeeDashboard />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/wellness" 
+        element={
+          <ProtectedRoute requiredRole="employee">
+            <WellnessWeatherDashboard />
           </ProtectedRoute>
         } 
       />

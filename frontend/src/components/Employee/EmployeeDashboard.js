@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useAuth } from '../../contexts/AuthContext';
 import { workReportAPI, weatherAbsenceAPI } from '../../services/api';
-import { LogOut, Briefcase, Home, Building, Bell, FileText, Clock, CloudRain } from 'lucide-react';
+import { LogOut, Briefcase, Home, Building, Bell, FileText, Clock, CloudRain, Heart } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import WorkStatusForm from './WorkStatusForm';
 import WorkHistory from './WorkHistory';
 import CompanyNotifications from './CompanyNotifications';
@@ -189,6 +190,7 @@ const StatusSubtitle = styled.p`
 
 function EmployeeDashboard() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('status');
   const [workReports, setWorkReports] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -401,6 +403,33 @@ function EmployeeDashboard() {
           </UserDetails>
         </UserInfo>
         <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={() => navigate('/wellness')}
+            style={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              border: 'none',
+              padding: '12px 20px',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontWeight: '500',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 10px 20px rgba(102, 126, 234, 0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <Heart size={20} />
+            Wellness Dashboard
+          </button>
           <button
             onClick={testBackendConnection}
             style={{
