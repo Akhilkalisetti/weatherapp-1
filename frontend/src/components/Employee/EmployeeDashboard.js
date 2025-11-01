@@ -343,16 +343,6 @@ function EmployeeDashboard() {
     setEditingReport(null);
   };
 
-  // Test function to verify backend connection
-  const testBackendConnection = async () => {
-    try {
-      console.log('🧪 Testing backend connection...');
-      const reports = await workReportAPI.getAll();
-      console.log('✅ Backend is accessible, loaded', reports.length, 'reports');
-    } catch (error) {
-      console.error('❌ Backend connection test failed:', error);
-    }
-  };
 
   const markNotificationAsRead = (notificationId) => {
     const updatedNotifications = notifications.map(n => 
@@ -429,24 +419,6 @@ function EmployeeDashboard() {
           >
             <Heart size={20} />
             Wellness Dashboard
-          </button>
-          <button
-            onClick={testBackendConnection}
-            style={{
-              background: '#10b981',
-              color: 'white',
-              border: 'none',
-              padding: '12px 20px',
-              borderRadius: '12px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontWeight: '500',
-              transition: 'all 0.3s ease'
-            }}
-          >
-            Test Backend
           </button>
           <LogoutButton onClick={handleLogout}>
             <LogOut size={20} />

@@ -7,7 +7,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getWellnessData, getAQIColor, getUVRisk } from '../../services/wellnessService';
 import AQIVisualization from './WellnessComponents/AQIVisualization';
 import UVIndexChart from './WellnessComponents/UVIndexChart';
-import PollenCountChart from './WellnessComponents/PollenCountChart';
 import TemperatureTrends from './WellnessComponents/TemperatureTrends';
 import PersonalizedTips from './WellnessComponents/PersonalizedTips';
 
@@ -256,6 +255,18 @@ function WellnessWeatherDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Auto-refresh data every 5 minutes for live updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!loading && wellnessData) {
+        loadWellnessData(currentLocation);
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentLocation, loading, wellnessData]);
+
   const loadWellnessData = async (city) => {
     setLoading(true);
     setError(null);
@@ -311,16 +322,6 @@ function WellnessWeatherDashboard() {
         value: `${wellnessData.temperature.current}°C`,
         color: '#667eea',
         category: 'Current'
-      },
-      {
-        label: 'Pollens',
-        value: Math.max(
-          wellnessData.pollen.grass,
-          wellnessData.pollen.trees,
-          wellnessData.pollen.weeds
-        ),
-        color: '#f59e0b',
-        category: 'Highest'
       }
     ];
   };
@@ -399,10 +400,6 @@ function WellnessWeatherDashboard() {
           </VisualizationGrid>
 
           <VisualizationGrid>
-            <Card>
-              <PollenCountChart pollenData={wellnessData.pollen} />
-            </Card>
-            
             <Card>
               <TemperatureTrends tempData={wellnessData.temperature} />
             </Card>

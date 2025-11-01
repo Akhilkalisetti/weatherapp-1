@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import styled from 'styled-components';
+import HomePage from './components/Home/HomePage';
 import Login from './components/Auth/Login';
 import TravelerDashboard from './components/Traveler/TravelerDashboard';
 import EmployeeDashboard from './components/Employee/EmployeeDashboard';
@@ -88,7 +89,7 @@ function AppRoutes() {
       />
       <Route 
         path="/" 
-        element={<Navigate to="/login" replace />} 
+        element={<HomePage />} 
       />
     </Routes>
   );

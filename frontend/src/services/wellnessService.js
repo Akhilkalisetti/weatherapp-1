@@ -137,26 +137,38 @@ async function getWellnessDataReal(cityName) {
   const weeds = pollen?.hourly?.weed_pollen?.[pHourIdx] ?? 0;
   const quantize = (v) => Math.max(0, Math.min(6, Math.round(v / 20))); // rough scale
 
-  // Generate personalized tips based on real-time data
+  // Generate personalized tips based on AQI levels
   const tips = [];
-  if (aqi > 100) {
-    tips.push({ type: 'mask', priority: 'high', message: `Air quality is ${aqiCategory(aqi).toLowerCase()} - sensitive individuals should wear masks` });
+  
+  if (aqi <= 50) {
+    // Green Alert (Good Air Quality – AQI 0–50)
+    tips.push({ type: 'outdoor', priority: 'low', message: '🌤️ Enjoy outdoor breaks — it\'s a great day for walking meetings or open-air lunches.' });
+    tips.push({ type: 'air', priority: 'low', message: '🪴 Open windows for fresh air circulation in your workspace or at home.' });
+    tips.push({ type: 'transport', priority: 'low', message: '🚴 Consider biking or walking to work — perfect weather and air quality for it.' });
+    tips.push({ type: 'nature', priority: 'low', message: '🌳 Take a few minutes to enjoy nature — it boosts mood and productivity.' });
+    tips.push({ type: 'eco', priority: 'low', message: '💡 Reminder: Keep practicing eco-friendly habits even when the air is good.' });
+  } else if (aqi <= 100) {
+    // Yellow Alert (Moderate Air Quality – AQI 51–100)
+    tips.push({ type: 'sensitive', priority: 'medium', message: '😷 Sensitive individuals (asthma, allergies) should limit prolonged outdoor exposure.' });
+    tips.push({ type: 'windows', priority: 'medium', message: '🌬️ Keep windows slightly closed if near busy roads.' });
+    tips.push({ type: 'indoor', priority: 'medium', message: '☕ Choose indoor seating for breaks or lunch.' });
+    tips.push({ type: 'plants', priority: 'medium', message: '🌱 Consider using air-purifying plants indoors (like snake plants or peace lilies).' });
+    tips.push({ type: 'transport', priority: 'medium', message: '🚗 Carpool or use public transport — help reduce emissions on moderate days.' });
+  } else {
+    // Red Alert (Unhealthy Air Quality – AQI 151–200+)
+    tips.push({ type: 'avoid', priority: 'high', message: '🚫 Avoid outdoor activities, including walking meetings or exercise.' });
+    tips.push({ type: 'mask', priority: 'high', message: '😷 Use N95 or equivalent masks if outdoor exposure is unavoidable.' });
+    tips.push({ type: 'indoor', priority: 'high', message: '🌬️ Keep office and home windows closed; use air purifiers if available.' });
+    tips.push({ type: 'breaks', priority: 'high', message: '🧘 Take breaks indoors — try deep breathing or stretching in well-ventilated rooms.' });
+    tips.push({ type: 'commute', priority: 'high', message: '🕓 If possible, adjust commuting times to avoid rush-hour pollution peaks.' });
+    tips.push({ type: 'hydration', priority: 'high', message: '💧 Stay hydrated — clean air filters and drink plenty of water to reduce irritation.' });
   }
+  
+  // Add UV-related tips
   if (uvCurrent > 7) {
-    tips.push({ type: 'sun', priority: 'high', message: 'High UV index - use sunscreen and seek shade' });
+    tips.push({ type: 'sun', priority: 'high', message: '☀️ High UV index - use sunscreen and seek shade' });
   } else if (uvCurrent > 5) {
-    tips.push({ type: 'sun', priority: 'medium', message: 'Moderate UV - apply sunscreen when outdoors' });
-  }
-  if (Math.max(quantize(grass), quantize(trees), quantize(weeds)) > 4) {
-    tips.push({ type: 'allergen', priority: 'high', message: 'High pollen levels - consider allergy medication' });
-  }
-  if (currentTemp > 30) {
-    tips.push({ type: 'hydration', priority: 'high', message: 'High temperature - stay hydrated and avoid prolonged sun exposure' });
-  } else if (currentTemp < 10) {
-    tips.push({ type: 'clothing', priority: 'high', message: 'Cold weather - dress warmly and layer up' });
-  }
-  if (tips.length === 0) {
-    tips.push({ type: 'general', priority: 'low', message: 'Good weather conditions - enjoy outdoor activities safely' });
+    tips.push({ type: 'sun', priority: 'medium', message: '☀️ Moderate UV - apply sunscreen when outdoors' });
   }
 
   return {
@@ -246,8 +258,11 @@ export const getWellnessData = async (cityName) => {
         forecast: [18, 20, 22, 21, 19, 17]
       },
       tips: [
-        { type: 'hydration', priority: 'medium', message: 'Stay hydrated in moderate temperatures' },
-        { type: 'sun', priority: 'low', message: 'Low UV risk - sunscreen optional' }
+        { type: 'outdoor', priority: 'low', message: '🌤️ Enjoy outdoor breaks — it\'s a great day for walking meetings or open-air lunches.' },
+        { type: 'air', priority: 'low', message: '🪴 Open windows for fresh air circulation in your workspace or at home.' },
+        { type: 'transport', priority: 'low', message: '🚴 Consider biking or walking to work — perfect weather and air quality for it.' },
+        { type: 'nature', priority: 'low', message: '🌳 Take a few minutes to enjoy nature — it boosts mood and productivity.' },
+        { type: 'eco', priority: 'low', message: '💡 Reminder: Keep practicing eco-friendly habits even when the air is good.' }
       ]
     },
     'Tokyo': {
@@ -286,9 +301,12 @@ export const getWellnessData = async (cityName) => {
         forecast: [22, 24, 25, 24, 23, 22]
       },
       tips: [
-        { type: 'sun', priority: 'high', message: 'High UV index - use sunscreen and seek shade' },
-        { type: 'hydration', priority: 'high', message: 'Increased hydration needed' },
-        { type: 'allergen', priority: 'medium', message: 'High pollen levels - consider medication' }
+        { type: 'outdoor', priority: 'low', message: '🌤️ Enjoy outdoor breaks — it\'s a great day for walking meetings or open-air lunches.' },
+        { type: 'air', priority: 'low', message: '🪴 Open windows for fresh air circulation in your workspace or at home.' },
+        { type: 'transport', priority: 'low', message: '🚴 Consider biking or walking to work — perfect weather and air quality for it.' },
+        { type: 'nature', priority: 'low', message: '🌳 Take a few minutes to enjoy nature — it boosts mood and productivity.' },
+        { type: 'eco', priority: 'low', message: '💡 Reminder: Keep practicing eco-friendly habits even when the air is good.' },
+        { type: 'sun', priority: 'high', message: '☀️ High UV index - use sunscreen and seek shade' }
       ]
     },
     'New York': {
@@ -327,8 +345,11 @@ export const getWellnessData = async (cityName) => {
         forecast: [15, 16, 18, 17, 15, 14]
       },
       tips: [
-        { type: 'mask', priority: 'high', message: 'Air quality moderate - sensitive individuals should wear masks' },
-        { type: 'indoor', priority: 'medium', message: 'High mold count - limit outdoor activities' }
+        { type: 'sensitive', priority: 'medium', message: '😷 Sensitive individuals (asthma, allergies) should limit prolonged outdoor exposure.' },
+        { type: 'windows', priority: 'medium', message: '🌬️ Keep windows slightly closed if near busy roads.' },
+        { type: 'indoor', priority: 'medium', message: '☕ Choose indoor seating for breaks or lunch.' },
+        { type: 'plants', priority: 'medium', message: '🌱 Consider using air-purifying plants indoors (like snake plants or peace lilies).' },
+        { type: 'transport', priority: 'medium', message: '🚗 Carpool or use public transport — help reduce emissions on moderate days.' }
       ]
     },
     'London': {
@@ -367,8 +388,11 @@ export const getWellnessData = async (cityName) => {
         forecast: [12, 13, 14, 13, 12, 11]
       },
       tips: [
-        { type: 'clothing', priority: 'high', message: 'Cooler weather - dress warmly' },
-        { type: 'allergen', priority: 'high', message: 'Very high tree pollen - take precautions' }
+        { type: 'sensitive', priority: 'medium', message: '😷 Sensitive individuals (asthma, allergies) should limit prolonged outdoor exposure.' },
+        { type: 'windows', priority: 'medium', message: '🌬️ Keep windows slightly closed if near busy roads.' },
+        { type: 'indoor', priority: 'medium', message: '☕ Choose indoor seating for breaks or lunch.' },
+        { type: 'plants', priority: 'medium', message: '🌱 Consider using air-purifying plants indoors (like snake plants or peace lilies).' },
+        { type: 'transport', priority: 'medium', message: '🚗 Carpool or use public transport — help reduce emissions on moderate days.' }
       ]
     }
   };
@@ -432,10 +456,30 @@ export const getWellnessData = async (cityName) => {
         temps[Math.floor(Math.random() * temps.length)]
       )
     },
-    tips: [
-      { type: 'hydration', priority: 'medium', message: 'Maintain regular hydration levels' },
-      { type: 'general', priority: 'low', message: 'Enjoy pleasant weather conditions' }
-    ]
+    tips: (() => {
+      const tips = [];
+      if (randomAqi <= 50) {
+        tips.push({ type: 'outdoor', priority: 'low', message: '🌤️ Enjoy outdoor breaks — it\'s a great day for walking meetings or open-air lunches.' });
+        tips.push({ type: 'air', priority: 'low', message: '🪴 Open windows for fresh air circulation in your workspace or at home.' });
+        tips.push({ type: 'transport', priority: 'low', message: '🚴 Consider biking or walking to work — perfect weather and air quality for it.' });
+        tips.push({ type: 'nature', priority: 'low', message: '🌳 Take a few minutes to enjoy nature — it boosts mood and productivity.' });
+        tips.push({ type: 'eco', priority: 'low', message: '💡 Reminder: Keep practicing eco-friendly habits even when the air is good.' });
+      } else if (randomAqi <= 100) {
+        tips.push({ type: 'sensitive', priority: 'medium', message: '😷 Sensitive individuals (asthma, allergies) should limit prolonged outdoor exposure.' });
+        tips.push({ type: 'windows', priority: 'medium', message: '🌬️ Keep windows slightly closed if near busy roads.' });
+        tips.push({ type: 'indoor', priority: 'medium', message: '☕ Choose indoor seating for breaks or lunch.' });
+        tips.push({ type: 'plants', priority: 'medium', message: '🌱 Consider using air-purifying plants indoors (like snake plants or peace lilies).' });
+        tips.push({ type: 'transport', priority: 'medium', message: '🚗 Carpool or use public transport — help reduce emissions on moderate days.' });
+      } else {
+        tips.push({ type: 'avoid', priority: 'high', message: '🚫 Avoid outdoor activities, including walking meetings or exercise.' });
+        tips.push({ type: 'mask', priority: 'high', message: '😷 Use N95 or equivalent masks if outdoor exposure is unavoidable.' });
+        tips.push({ type: 'indoor', priority: 'high', message: '🌬️ Keep office and home windows closed; use air purifiers if available.' });
+        tips.push({ type: 'breaks', priority: 'high', message: '🧘 Take breaks indoors — try deep breathing or stretching in well-ventilated rooms.' });
+        tips.push({ type: 'commute', priority: 'high', message: '🕓 If possible, adjust commuting times to avoid rush-hour pollution peaks.' });
+        tips.push({ type: 'hydration', priority: 'high', message: '💧 Stay hydrated — clean air filters and drink plenty of water to reduce irritation.' });
+      }
+      return tips;
+    })()
   };
 };
 
