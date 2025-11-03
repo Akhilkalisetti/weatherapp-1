@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useAuth } from '../../contexts/AuthContext';
-import { LogOut, Plane, MapPin, Camera, AlertCircle, Sun, Image, CheckSquare, DollarSign, Phone } from 'lucide-react';
+import { LogOut, Plane, MapPin, Camera, AlertCircle, Sun, Image, CheckSquare, DollarSign, Phone, Calendar, BarChart3 } from 'lucide-react';
 import CitySelector from './CitySelector';
 import TravelAdvice from './TravelAdvice';
 import WeatherAlerts from './WeatherAlerts';
@@ -11,6 +11,9 @@ import Gallery from './Gallery';
 import TravelChecklist from './TravelChecklist';
 import CurrencyConverter from './CurrencyConverter';
 import EmergencyInfo from './EmergencyInfo';
+import TripPlanner from './TripPlanner';
+import WeatherGraph from './WeatherGraph';
+import TripWeatherAlerts from './TripWeatherAlerts';
 import { getWeatherData } from '../../services/weatherService';
 import { getCountryInfo } from '../../services/countryService';
 import { memoryAPI } from '../../services/api';
@@ -259,10 +262,13 @@ function TravelerDashboard() {
             <p>Ready for your next adventure?</p>
           </UserDetails>
         </UserInfo>
-        <LogoutButton onClick={handleLogout}>
-          <LogOut size={20} />
-          Logout
-        </LogoutButton>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <TripWeatherAlerts />
+          <LogoutButton onClick={handleLogout}>
+            <LogOut size={20} />
+            Logout
+          </LogoutButton>
+        </div>
       </Header>
 
       <TabContainer>
@@ -294,6 +300,20 @@ function TravelerDashboard() {
           >
             <Sun size={20} />
             Weather
+          </Tab>
+          <Tab 
+            active={activeTab === 'trip-planner'} 
+            onClick={() => setActiveTab('trip-planner')}
+          >
+            <Calendar size={20} />
+            Trip Planner
+          </Tab>
+          <Tab 
+            active={activeTab === 'weather-graph'} 
+            onClick={() => setActiveTab('weather-graph')}
+          >
+            <BarChart3 size={20} />
+            Weather Graph
           </Tab>
         </TabHeader>
 
@@ -392,6 +412,14 @@ function TravelerDashboard() {
                 weatherData={weatherData}
               />
             </Card>
+          )}
+
+          {activeTab === 'trip-planner' && (
+            <TripPlanner />
+          )}
+
+          {activeTab === 'weather-graph' && (
+            <WeatherGraph />
           )}
         </TabContent>
       </TabContainer>
