@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { useAuth } from '../../contexts/AuthContext';
-import { getWeatherData, getWeatherIcon, getWeatherDescription } from '../../services/weatherService';
+import { getWeatherData, getWeatherByCoords, getWeatherIcon, getWeatherDescription } from '../../services/weatherService';
 import { CloudRain, MapPin, FileText, Camera, Send, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -237,6 +237,9 @@ function WeatherAbsenceForm({ onSubmit }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [verificationResult, setVerificationResult] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [fetchedWeather, setFetchedWeather] = useState(null);
+  const [weatherError, setWeatherError] = useState('');
+  const debounceTimer = useRef(null);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -260,6 +263,53 @@ function WeatherAbsenceForm({ onSubmit }) {
         setImagePreview(e.target.result);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  // Debounced live weather fetch when typing location
+  useEffect(() => {
+    const value = formData.location?.trim();
+    setWeatherError('');
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    if (!value) {
+      setFetchedWeather(null);
+      return;
+    }
+    debounceTimer.current = setTimeout(async () => {
+      try {
+        const data = await getWeatherData(value);
+        setFetchedWeather(data);
+      } catch (err) {
+        setFetchedWeather(null);
+        setWeatherError(typeof err?.message === 'string' ? err.message : 'Unable to fetch weather');
+      }
+    }, 1000);
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, [formData.location]);
+
+  const useMyLocation = async () => {
+    try {
+      if (!navigator.geolocation) {
+        setWeatherError('Geolocation is not supported by your browser');
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          const data = await getWeatherByCoords(latitude, longitude);
+          setFetchedWeather(data);
+          setFormData(prev => ({ ...prev, location: data.city || `${latitude.toFixed(3)}, ${longitude.toFixed(3)}` }));
+          setWeatherError('');
+        } catch (err) {
+          setWeatherError(typeof err?.message === 'string' ? err.message : 'Unable to fetch weather for your location');
+        }
+      }, (geoErr) => {
+        setWeatherError(geoErr?.message || 'Failed to get your location');
+      }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 });
+    } catch (e) {
+      setWeatherError('Failed to access geolocation');
     }
   };
 
@@ -288,8 +338,22 @@ function WeatherAbsenceForm({ onSubmit }) {
     setVerificationResult(null);
 
     try {
-      // Get weather data for verification
-      const weatherData = await getWeatherData(formData.location);
+      // Prefer already-fetched weather to avoid extra API calls
+      let weatherData = fetchedWeather;
+      if (!weatherData) {
+        try {
+          weatherData = await getWeatherData(formData.location);
+        } catch (e) {
+          // Allow manual override if fetch fails
+          weatherData = {
+            temperature: undefined,
+            condition: 'unknown',
+            humidity: undefined,
+            windSpeed: undefined,
+            alerts: []
+          };
+        }
+      }
       
       const isSevere = isSevereWeather(weatherData);
       
@@ -387,6 +451,42 @@ function WeatherAbsenceForm({ onSubmit }) {
             placeholder="e.g., New York, NY"
             required
           />
+          <div style={{ marginTop: '10px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <button type="button" onClick={useMyLocation} style={{
+              background: '#f0f4ff',
+              border: '1px solid #e1e5e9',
+              color: '#333',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              cursor: 'pointer'
+            }}>Use my location</button>
+            {weatherError && (
+              <span style={{ color: '#d97706', fontSize: '0.9rem' }}>{weatherError}</span>
+            )}
+          </div>
+          {fetchedWeather && (
+            <div style={{ marginTop: '12px' }}>
+              <WeatherInfo>
+                <WeatherItem>
+                  <WeatherIcon>{getWeatherIcon(fetchedWeather.condition)}</WeatherIcon>
+                  <WeatherLabel>Condition</WeatherLabel>
+                  <WeatherValue>{getWeatherDescription(fetchedWeather.condition)}</WeatherValue>
+                </WeatherItem>
+                <WeatherItem>
+                  <WeatherLabel>Temperature</WeatherLabel>
+                  <WeatherValue>{typeof fetchedWeather.temperature === 'number' ? `${fetchedWeather.temperature}°C` : '-'}</WeatherValue>
+                </WeatherItem>
+                <WeatherItem>
+                  <WeatherLabel>Humidity</WeatherLabel>
+                  <WeatherValue>{typeof fetchedWeather.humidity === 'number' ? `${fetchedWeather.humidity}%` : '-'}</WeatherValue>
+                </WeatherItem>
+                <WeatherItem>
+                  <WeatherLabel>Wind Speed</WeatherLabel>
+                  <WeatherValue>{typeof fetchedWeather.windSpeed === 'number' ? `${fetchedWeather.windSpeed} km/h` : '-'}</WeatherValue>
+                </WeatherItem>
+              </WeatherInfo>
+            </div>
+          )}
         </FormGroup>
 
         <FormGroup>

@@ -1,98 +1,64 @@
-// Mock weather service - in a real app, this would connect to a weather API like OpenWeatherMap
-export const getWeatherData = async (cityName) => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // Mock weather data
-  const mockWeatherData = {
-    'Paris': {
-      temperature: 18,
-      condition: 'partly-cloudy',
-      humidity: 65,
-      windSpeed: 12,
-      alerts: [
-        {
-          type: 'warning',
-          message: 'Light rain expected in the afternoon',
-          time: '14:00'
-        }
-      ]
-    },
-    'Tokyo': {
-      temperature: 22,
-      condition: 'sunny',
-      humidity: 70,
-      windSpeed: 8,
-      alerts: [
-        {
-          type: 'info',
-          message: 'Perfect weather for sightseeing today',
-          time: '09:00'
-        }
-      ]
-    },
-    'New York': {
-      temperature: 15,
-      condition: 'rainy',
-      humidity: 80,
-      windSpeed: 15,
-      alerts: [
-        {
-          type: 'warning',
-          message: 'Heavy rain and strong winds expected',
-          time: '16:00'
-        },
-        {
-          type: 'info',
-          message: 'Umbrella recommended for outdoor activities',
-          time: '10:00'
-        }
-      ]
-    },
-    'London': {
-      temperature: 12,
-      condition: 'cloudy',
-      humidity: 75,
-      windSpeed: 10,
-      alerts: [
-        {
-          type: 'info',
-          message: 'Typical London weather - overcast skies',
-          time: '08:00'
-        }
-      ]
-    }
+// Live weather service using Open-Meteo (same API family used by traveler)
+// No API key required
+
+async function geocodeCity(cityName) {
+  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=1&language=en`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
+  const res = await fetch(url, { signal: controller.signal });
+  clearTimeout(timeoutId);
+  if (!res.ok) throw new Error('Failed to find location');
+  const data = await res.json();
+  const place = data.results && data.results[0];
+  if (!place) throw new Error(`City "${cityName}" not found`);
+  return { lat: place.latitude, lon: place.longitude, name: place.name };
+}
+
+function mapWeatherCodeToCondition(code) {
+  const codes = {
+    0: 'sunny',
+    1: 'partly-cloudy', 2: 'partly-cloudy', 3: 'cloudy',
+    45: 'cloudy', 48: 'cloudy',
+    51: 'rainy', 53: 'rainy', 55: 'rainy',
+    56: 'rainy', 57: 'rainy',
+    61: 'rainy', 63: 'rainy', 65: 'rainy',
+    66: 'rainy', 67: 'rainy',
+    71: 'cloudy', 73: 'cloudy', 75: 'cloudy', 77: 'cloudy',
+    80: 'rainy', 81: 'rainy', 82: 'stormy',
+    85: 'cloudy', 86: 'cloudy',
+    95: 'stormy', 96: 'stormy', 99: 'stormy'
   };
+  return codes[code] || 'partly-cloudy';
+}
 
-  // Return mock data for known cities, or generate random data for others
-  if (mockWeatherData[cityName]) {
-    return mockWeatherData[cityName];
-  }
-
-  // Generate random weather data for unknown cities
-  const conditions = ['sunny', 'cloudy', 'partly-cloudy', 'rainy', 'stormy'];
-  const alertTypes = ['info', 'warning', 'alert'];
-  const alertMessages = [
-    'Perfect weather for outdoor activities',
-    'Light rain expected later today',
-    'Strong winds in the forecast',
-    'Temperature dropping in the evening',
-    'Clear skies and pleasant conditions'
-  ];
-
+function normalizeCurrentWeather(json, meta) {
+  const cur = json?.current;
+  const condition = mapWeatherCodeToCondition(cur?.weather_code);
   return {
-    temperature: Math.floor(Math.random() * 25) + 5, // 5-30°C
-    condition: conditions[Math.floor(Math.random() * conditions.length)],
-    humidity: Math.floor(Math.random() * 40) + 40, // 40-80%
-    windSpeed: Math.floor(Math.random() * 20) + 5, // 5-25 km/h
-    alerts: [
-      {
-        type: alertTypes[Math.floor(Math.random() * alertTypes.length)],
-        message: alertMessages[Math.floor(Math.random() * alertMessages.length)],
-        time: `${Math.floor(Math.random() * 12) + 8}:00`
-      }
-    ]
+    city: meta?.name,
+    temperature: typeof cur?.temperature_2m === 'number' ? Math.round(cur.temperature_2m) : undefined,
+    condition,
+    humidity: typeof cur?.relative_humidity_2m === 'number' ? Math.round(cur.relative_humidity_2m) : undefined,
+    windSpeed: typeof cur?.wind_speed_10m === 'number' ? Math.round(cur.wind_speed_10m) : undefined,
+    alerts: []
   };
+}
+
+export const getWeatherData = async (cityName) => {
+  const loc = await geocodeCity(cityName);
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=auto`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to fetch weather');
+  const data = await res.json();
+  return normalizeCurrentWeather(data, { name: loc.name });
+};
+
+export const getWeatherByCoords = async (lat, lon) => {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=auto`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to fetch weather');
+  const data = await res.json();
+  return normalizeCurrentWeather(data, {});
 };
 
 export const getWeatherIcon = (condition) => {

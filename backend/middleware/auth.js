@@ -1,5 +1,8 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Traveler = require('../models/Traveler');
+const Employee = require('../models/Employee');
+const Company = require('../models/Company');
 
 // Verify JWT token
 const auth = async (req, res, next) => {
@@ -17,7 +20,18 @@ const auth = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     console.log('✅ Token decoded for user:', decoded.userId);
     
-    const user = await User.findById(decoded.userId).select('-password');
+    let user = null;
+    if (decoded.role === 'traveler') {
+      user = await Traveler.findById(decoded.userId).select('-password');
+    } else if (decoded.role === 'employee') {
+      user = await Employee.findById(decoded.userId).select('-password');
+    } else if (decoded.role === 'admin') {
+      user = await Company.findById(decoded.userId).select('-password');
+    }
+    // Fallback to legacy users collection
+    if (!user) {
+      user = await User.findById(decoded.userId).select('-password');
+    }
     
     if (!user) {
       console.log('❌ User not found');

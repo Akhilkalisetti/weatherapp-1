@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { Building, Users, CheckCircle, XCircle, Clock, AlertTriangle, MapPin, Calendar, FileText, MessageSquare, LogOut } from 'lucide-react';
+import { Building, Users, CheckCircle, XCircle, Clock, AlertTriangle, MapPin, Calendar, FileText, MessageSquare, LogOut, Send } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { weatherAbsenceAPI } from '../../services/api';
+import EmployeeMessageCenter from './EmployeeMessageCenter';
 import toast from 'react-hot-toast';
 
 const DashboardContainer = styled.div`
@@ -399,8 +400,61 @@ const EmptyDescription = styled.p`
   font-size: 1rem;
 `;
 
+const TabContainer = styled.div`
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  margin-bottom: 30px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+`;
+
+const TabHeader = styled.div`
+  display: flex;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e1e5e9;
+`;
+
+const Tab = styled.button`
+  flex: 1;
+  padding: 20px;
+  border: none;
+  background: ${props => props.active ? 'white' : 'transparent'};
+  color: ${props => props.active ? '#667eea' : '#666'};
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  position: relative;
+  
+  &:hover {
+    background: ${props => props.active ? 'white' : '#f0f0f0'};
+  }
+  
+  ${props => props.active && `
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+  `}
+`;
+
+const TabContent = styled.div`
+  padding: 30px;
+`;
+
 function CompanyDashboard() {
   const { logout } = useAuth();
+  const [activeTab, setActiveTab] = useState('requests');
   const [requests, setRequests] = useState([]);
   const [filter, setFilter] = useState('all');
   const [comments, setComments] = useState({});
@@ -582,6 +636,26 @@ function CompanyDashboard() {
         </StatCard>
       </StatsGrid>
 
+      <TabContainer>
+        <TabHeader>
+          <Tab 
+            active={activeTab === 'requests'} 
+            onClick={() => setActiveTab('requests')}
+          >
+            <FileText size={20} />
+            Absence Requests
+          </Tab>
+          <Tab 
+            active={activeTab === 'messages'} 
+            onClick={() => setActiveTab('messages')}
+          >
+            <Send size={20} />
+            Message Center
+          </Tab>
+        </TabHeader>
+
+        <TabContent>
+          {activeTab === 'requests' && (
       <RequestsContainer>
         <RequestsHeader>
           <RequestsTitle>
@@ -774,6 +848,13 @@ function CompanyDashboard() {
           </RequestList>
         )}
       </RequestsContainer>
+          )}
+
+          {activeTab === 'messages' && (
+            <EmployeeMessageCenter />
+          )}
+        </TabContent>
+      </TabContainer>
     </DashboardContainer>
   );
 }

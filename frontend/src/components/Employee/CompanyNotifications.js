@@ -161,9 +161,9 @@ function CompanyNotifications({ notifications, onMarkAsRead }) {
     );
   }
 
-  const handleNotificationClick = (notification) => {
-    if (!notification.read) {
-      onMarkAsRead(notification.id);
+  const handleNotificationClick = async (notification) => {
+    if (!notification.read && onMarkAsRead) {
+      await onMarkAsRead(notification.id);
     }
   };
 

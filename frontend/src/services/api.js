@@ -169,3 +169,60 @@ export const userAPI = {
     return fetchAPI('/auth/me');
   }
 };
+
+// Message API
+export const messageAPI = {
+  // Get current employee's messages
+  getMine: async (category = 'all', unreadOnly = false) => {
+    const params = new URLSearchParams();
+    if (category !== 'all') params.append('category', category);
+    if (unreadOnly) params.append('unreadOnly', 'true');
+    return fetchAPI(`/messages/me?${params.toString()}`);
+  },
+
+  // Get all messages (admin)
+  getAll: async (employeeId = null, category = 'all', unreadOnly = false) => {
+    const params = new URLSearchParams();
+    if (employeeId) params.append('employeeId', employeeId);
+    if (category !== 'all') params.append('category', category);
+    if (unreadOnly) params.append('unreadOnly', 'true');
+    return fetchAPI(`/messages?${params.toString()}`);
+  },
+
+  // Create message (admin)
+  create: async (messageData) => {
+    return fetchAPI('/messages', {
+      method: 'POST',
+      body: JSON.stringify(messageData)
+    });
+  },
+
+  // Mark message as read
+  markRead: async (messageId) => {
+    return fetchAPI(`/messages/${messageId}/read`, {
+      method: 'PUT'
+    });
+  },
+
+  // Delete message (admin)
+  delete: async (messageId) => {
+    return fetchAPI(`/messages/${messageId}`, {
+      method: 'DELETE'
+    });
+  },
+
+  // Search employees (admin)
+  searchEmployees: async (query) => {
+    return fetchAPI('/messages/search-employees', {
+      method: 'POST',
+      body: JSON.stringify({ query })
+    });
+  },
+
+  // Generate automated alerts (admin)
+  generateAlerts: async () => {
+    return fetchAPI('/messages/generate-alerts', {
+      method: 'POST'
+    });
+  }
+};
